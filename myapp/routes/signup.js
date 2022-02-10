@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mysql = require('mysql');
-// const connection = require('../app');
+require("dotenv").config();
 
 router.get('/', function(req, res){
     // console.log('signup_page!!');
@@ -11,11 +11,11 @@ router.get('/', function(req, res){
 
 //mysql 연결
 const connection = mysql.createConnection({
-  host : 'localhost',
-  port : 3306,
-  user : 'root',
-  password : '123456789',
-  database : 'recipedb'
+  host : process.env.databaseHost,
+  port : process.env.databasePort,
+  user : process.env.databaseUser,
+  password : process.env.databasePassword,
+  database : process.env.databaseName
 });
 
 connection.connect();
@@ -64,14 +64,14 @@ router.post('/', function(req,res){
                     return res.status(201).send('membership_registration_completed.');
                 }
                 if(results.length >= 1){ // 닉네임 중복 시 회원가입 불가
-                    console.log('the same nickname. please change your nickname');
-                    return res.status(400).send('the same nickname. please change your nickname');
+                    console.log('the_same_nickname._please_change_your_nickname');
+                    return res.status(400).send('the_same_nickname._please_change_your_nickname');
                 }
             })
         }
         if(results.length >= 1){ // ID 중복 시 회원가입 불가
-            console.log('the same id. please change your id');
-            return res.status(400).send('the same id. please change your id');
+            console.log('the_same_id._please_change_your_id');
+            return res.status(400).send('the_same_id._please_change_your_id');
         }
     });
 
@@ -151,10 +151,8 @@ router.post('/', function(req,res){
     
  
 });
-//로그인 페이지
-router.get('/login', function(req,res){
-    res.status(200).send('login_page!')
-})
+
+
 //로그인 코드
 router.post('/login', function(req,res){
     // userAdd.includes(req.body.userId);
@@ -171,7 +169,7 @@ router.post('/login', function(req,res){
 
     connection.query('select * from user where user_id = ?', serchId, function(err, results){ // 데이터베이스에 저장된 ID 찾기
  
-        if(results.length == 0) return res.status(401).send('the id is wrong.') // 저장된 값이 없으면 잘못된 ID라고 출력
+        if(results.length == 0) return res.status(401).end();
         let findId = results[0].user_id;
         console.log(results[0].user_id);
         console.log(results);
@@ -186,8 +184,8 @@ router.post('/login', function(req,res){
         console.log(results[0].password);
         console.log(findPassword);
         console.log(serchPassword);
-        if(serchPassword == findPassword) res.status(201).send('login succees.'); // 입력한 비밀번호와 데이터베이스에 저장된 비밀번호가 일치하면 로그인 성공
-        if(serchPassword !== findPassword) return res.status(401).send('the password is wrong.') // 입력한 비밀번호와 데이터베이스에 저장된 비밀번호가 다르면 로그인 실패
+        if(serchPassword == findPassword) res.status(200).send('login_succees.'); // 입력한 비밀번호와 데이터베이스에 저장된 비밀번호가 일치하면 로그인 성공
+        if(serchPassword !== findPassword) return res.status(401).send('the_password_is_wrong.') // 입력한 비밀번호와 데이터베이스에 저장된 비밀번호가 다르면 로그인 실패
        
     })
 
@@ -218,5 +216,7 @@ router.post('/login', function(req,res){
     
 
 });
+
+//회원탈퇴 코드
 
 module.exports = router;
