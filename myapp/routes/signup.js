@@ -59,7 +59,8 @@ router.post('/', function(req,res){
             connection.query('select * from user where nickname = ?', userNickname, function(err, results){ // 닉네임 중복 검사
                 if(results.length < 1){ // 중복되는 닉네임이 없으면 회원 가입 완료
                     console.log('useable nickname.')
-                    connection.query('insert into user (user_id, nickname, password, email, registration) values(?,?,?,?,now())',[userId, userNickname, userPassword, userEmail])
+                    connection.query('insert into user (user_id, nickname, password, email, registration) values(?,?,?,?,now())',[userId, userNickname, userPassword, userEmail]) // 회원정보 user 테이블에 저장
+                    connection.query('insert into hide_user (user_id, nickname, password, email, registration) values(?,?,?,?,now())',[userId, userNickname, userPassword, userEmail]) // 회원정보를 안보이게 저장
                     console.log('membership_registration_completed.')
                     return res.status(201).send('membership_registration_completed.');
                 }
@@ -218,5 +219,31 @@ router.post('/login', function(req,res){
 });
 
 //회원탈퇴 코드
+router.delete('/withdrawal', function (req, res){
+    let withdrawalId = req.body.withdrawalId;
+    let withdrawalPassword = req.body.withdrawalPassword;
+
+    connection.query('select * from user where user_id = ?',withdrawalId, function(err, results){
+        if(results.length == 0) return res.status(401).end();
+        let findPassword = results[0].password;
+        let indexId = results[0].id;
+        console.log(results);
+        console.log(indexId);
+        console.log(withdrawalPassword);
+        console.log(findPassword);
+        if(withdrawalPassword !== findPassword) return res.status(401).send('the_password_is_wrong.');
+        if(withdrawalPassword == findPassword) {
+            connection.query('delete from user where id = ?',indexId);
+            res.status(200).send('successfully_dropped_out_of_the_membership.');
+        }
+
+    })
+
+
+})
+
+//회원수정 코드
+
+
 
 module.exports = router;
