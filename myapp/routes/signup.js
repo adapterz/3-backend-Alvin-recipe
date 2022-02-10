@@ -257,8 +257,8 @@ router.patch('/edit', function(req, res){
     let userPassword = req.body.userPassword;
     let editEmail = req.body.editEmail;
 
-    console.log('수정전 닉네임 : ', editNickname);
-    console.log('수정전 이메일 : ', editEmail)
+    // console.log('수정전 닉네임 : ', editNickname);
+    // console.log('수정전 이메일 : ', editEmail);
     connection.query('select * from user where user_id = ?',userId, function(err, results){ // 데이터베이스에 ID 조회
         if(results.length == 0) return res.status(401).end(); // 데이터베이스에 ID 없으면 종료
         if(editNickname == undefined) editNickname = results[0].nickname; // 변경할 닉네임이 없으면 원래 닉네임 할당
@@ -266,8 +266,8 @@ router.patch('/edit', function(req, res){
 
         let findPassword = results[0].password; // 데이터베이스에 저장된 비밀번호를 findPassword에 할당
         let indexId = results[0].id; // 데이터베이스에 저장된 indexId를 indexId에 할당
-        console.log('수정 후 닉네임 : ', editNickname);
-        console.log('수정 후 이메일 : ', editEmail)
+        // console.log('수정 후 닉네임 : ', editNickname);
+        // console.log('수정 후 이메일 : ', editEmail);
         // console.log(findEmail);
         // console.log(findNickname);
         console.log('index : ', indexId);
