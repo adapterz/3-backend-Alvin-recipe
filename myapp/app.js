@@ -8,22 +8,12 @@ const mysql = require('mysql');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const signupRouter = require('./routes/signup');
-// mysql 데이터베이스 연결
-// const connection = mysql.createConnection({
-//   host : 'localhost',
-//   port : 3306,
-//   user : 'root',
-//   password : '123456789',
-//   database : 'recipedb'
-// });
-
-// connection.connect();
 
 const app = express();
 
 // view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
+// app.set('views', path.join(__dirname, 'views'));
+// app.set('view engine', 'ejs');
 
 app.use(logger('dev'));
 app.use(express.json());
