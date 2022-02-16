@@ -1,3 +1,4 @@
+const express = require('express');
 require("dotenv").config();
 const mysql = require('mysql');
 const database = {};
@@ -8,9 +9,11 @@ const connection = mysql.createConnection({
   port : process.env.databasePort,
   user : process.env.databaseUser,
   password : process.env.databasePassword,
-  database : process.env.databaseName
+  database : process.env.databaseName,
+  dateStrings: 'date'
 });
 
 connection.connect();
 
-module.exports = database;
+
+module.exports = connection;
