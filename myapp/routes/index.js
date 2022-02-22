@@ -1,18 +1,12 @@
 const express = require('express');
 const router = express.Router();
 
-const postRouter = require('../controller/post');
+const postRouter = require('../controllers/post');
 const usersRouter = require('./users');
-const commentRouter = require('../controller/comment');
-
-
-/* GET home page. */
-// router.get('/', function(req, res, next) {
-//   res.render('index', { title: 'Express' });
-// });
+const commentRouter = require('../controllers/comment');
 
 router.use('/comment', commentRouter);
-router.use('/users',usersRouter);
-router.use('/post',postRouter);
+router.use('/users', usersRouter);
+router.use('/post', postRouter);
 
 module.exports = router;
