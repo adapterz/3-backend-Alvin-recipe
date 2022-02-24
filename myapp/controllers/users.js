@@ -150,8 +150,8 @@ router.post('/login', function (req, res) {
     const userId = req.body.userId;
     const userPassword = req.body.userPassword;
 
-    console.log(req.cookies.sid);
-    console.log(req.cookies.userId);
+    // console.log(req.cookies.sid);
+    // console.log(req.cookies.userId);
 
     if (req.sessionID == req.cookies.sid) return res.status(200).send('cookie_login_success');
 
@@ -162,7 +162,7 @@ router.post('/login', function (req, res) {
     connection.query('select * from user where user_id = ?', userId, function (err, results) {
         // 데이터베이스에 저장된 ID 찾기
 
-        if (results.length == 0) return res.status(401).end(); // 데이터베이스에 저장된 데이터가 없으면 종료
+        if (results.length == 0) return res.status(404).end(); // 데이터베이스에 저장된 데이터가 없으면 종료
 
         let findPassword = results[0].password; // 데이터베이스에 저장된 ID의 비밀번호를 findPassword에 할당
 
@@ -188,7 +188,7 @@ router.delete('/', function (req, res) {
         // 데이터베이스에 ID 조회
         if (results.length == 0) {
             connection.rollback();
-            return res.status(401).end(); // 데이터베이스에 ID 없으면 종료
+            return res.status(404).end(); // 데이터베이스에 ID 없으면 종료
         }
         if (err) {
             connection.rollback();
@@ -210,7 +210,7 @@ router.delete('/', function (req, res) {
                 connection.query('update hide_user set withdrawal = now() where id = ?', hide_indexId); // hide_user 테이블에 삭제된 시간 기록
             });
             connection.commit();
-            return res.status(200).send('successfully_dropped_out_of_the_membership.');
+            return res.status(200).end();
         }
     });
 });
@@ -225,7 +225,7 @@ router.patch('/', function (req, res) {
     connection.beginTransaction();
     connection.query('select * from user where user_id = ?', userId, function (err, results) {
         // 데이터베이스에 ID 조회
-        if (results.length == 0) return res.status(401).end(); // 데이터베이스에 ID 없으면 종료
+        if (results.length == 0) return res.status(404).end(); // 데이터베이스에 ID 없으면 종료
         if (editNickname == undefined) editNickname = results[0].nickname; // 변경할 닉네임이 없으면 원래 닉네임 할당
         if (editEmail == undefined) editEmail = results[0].email; // 변경할 이메일이 없으면 원래 이메일 할당
 
@@ -243,7 +243,7 @@ router.patch('/', function (req, res) {
                 connection.query('update hide_user set nickname = ?, email = ?, edit = now() where id = ?', [editNickname, editEmail, hide_indexId]); // // hide_user 테이블에 수정시간 업데이트
             });
             connection.commit();
-            return res.status(200).send('done');
+            return res.status(200).end();
         }
     });
 });
@@ -280,7 +280,7 @@ router.post('/findpassword', function (req, res) {
     connection.query('select user_id,email from user where user_id = ?', userId, function (err, results) {
         if (err) return res.status(500).end();
 
-        if (results < 1) return res.status(400).send('ID가 없습니다.');
+        if (results < 1) return res.status(404).send('ID가 없습니다.');
 
         let findId = results[0].user_id;
         let findEmail = results[0].email;
