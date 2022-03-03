@@ -3,20 +3,22 @@ const express = require('express');
 const router = express.Router();
 const connection = require('../models/database');
 const transporter = require('../email');
-
-router.get('/', function (req, res) {
-    // console.log('signup_page!!');
-    res.send('welcome!_for_my_recipe');
-});
+const upload = require('../models/upload');
 
 // 회원 가입 코드
-router.post('/', function (req, res, next) {
-    let userEmail = req.body.userEmail;
-    let userAuthNumber = req.body.userAuthNumber;
+router.post('/auth', upload.single('userEmail'), function (req, res, next) {
+    const checkEmail = /[\w\-\.]+\@[\w\-\.]+\.[\w]/g; // 이메일 체크 정규식
+    const userEmail = req.body.userEmail;
+    const userAuthNumber = req.body.userAuthNumber;
 
-    let random = Math.floor(Math.random() * 888888) + 111111;
+    if (userEmail == undefined) return res.status(400).send('email_is_not_null');
+
+    if (userEmail.match(checkEmail) == null) return res.status(400).end(); // 이메일 형식이 다르면 종료
+
+    const random = Math.floor(Math.random() * 888888) + 111111; // 인증번호
 
     const mailOptions = {
+        // 메일 내용
         from: process.env.nodemailerEmail,
         to: userEmail,
         subject: '이메일 인증',
@@ -26,7 +28,7 @@ router.post('/', function (req, res, next) {
     connection.query('select userEmail,authNumber from auth where userEmail = ?', userEmail, function (err, results) {
         // 입력한 이메일에 대한 인증번호 검색
 
-        if (err) return res.status(500).end();
+        if (err) return res.status(500).end(); // 데이터베이스 오류면 500에러
 
         if (results.length == 0) {
             // 인증번호가 없다면 인증번호 메일 발송
@@ -35,12 +37,10 @@ router.post('/', function (req, res, next) {
                 if (!err) {
                     // 인증번호 메일 발송 성공 시 데이터베이스에 저장
                     connection.query('insert into auth (userEmail, authNumber, registration) values (?,?,now())', [userEmail, random]); // 데이터베이스에 이메일,인증번호 저장
-                    // console.log('메일발송 성공',info);
                     return res.status(201).send('i`m_done_sending_mail.');
                 }
                 if (err) {
                     // 발송에서 실패 시 에러 메세지
-                    // console.log('여기에러',err);
                     return res.status(500).send('err');
                 }
             });
@@ -55,20 +55,26 @@ router.post('/', function (req, res, next) {
 
             if (authNum == userAuthNumber) {
                 connection.query('delete from auth where userEmail = ?', userEmail); // 인증에 성공했기 때문에 데이터베이스에 저장된 인증번호 삭제
-                next(); // 입력한 인증번호와 데이터베이스에 저장된 인증번호가 같으면 다음api 호출
+                return res.status(200).end();
             }
         }
     });
 });
 
 router.post('/', function (req, res) {
-    console.log('이메일 인증 완료');
+    const checkSpace = /\s/g;
+    const checkUpper = /[A-Z]+/g;
+    const checkLower = /[a-z]+/g;
+    const checkNum = /[0-9]+/g;
+    const checkSpecial = /[^a-z0-9ㄱ-ㅎ가-힣]+/gi;
+    const checkHangul = /[ㄱ-ㅎ가-힣]+/g;
 
-    let userId = req.body.userId;
-    let userNickname = req.body.userNickname;
-    let userPassword = req.body.userPassword;
-    let userRetryPassword = req.body.userRetryPassword;
-    let userEmail = req.body.userEmail;
+    const userId = req.body.userId;
+    const userNickname = req.body.userNickname;
+    const userPassword = req.body.userPassword;
+    const userRetryPassword = req.body.userRetryPassword;
+    const userEmail = req.body.userEmail;
+    let image = '/image/deault.png';
 
     // ID 빈칸 불가
     if (userId == null || userId == undefined) return res.status(400).send('userId_please_add_it.');
@@ -80,65 +86,52 @@ router.post('/', function (req, res) {
     if (userEmail == null || userEmail == undefined) return res.status(400).send('userEmail_please_add_it.');
     // 패스워드와 재입력패스워드가 다르면 회원가입 불가
     if (userPassword !== userRetryPassword) return res.status(400).send('it_doesn`t_match_the_password');
+    // 패스워드 길이 검사(9~20 글자)
+    if (userPassword.length < 9 || userPassword.length > 20) return res.status(400).send('password_use_9~20_letters');
+    // 패스워드에 공백 사용 불가
+    if (userPassword.match(checkSpace) !== null) return res.status(400).send('remove_the_space');
+    // 패스워드에 대문자 포함여부 확인
+    if (userPassword.match(checkUpper) == null) return res.status(400).send('include_upper_case');
+    // 패스워드에 소문자 포함여부 확인
+    if (userPassword.match(checkLower) == null) return res.status(400).send('include_lower_case');
+    // 패스워드에 숫자 포함여부 확인
+    if (userPassword.match(checkNum) == null) return res.status(400).send('include_number');
+    // 패스워드에 특수문자 포함여부 확인
+    if (userPassword.match(checkSpecial) == null) return res.status(400).send('include_special_characters');
+    // 패스워드에 한글 사용불가
+    if (userPassword.match(checkHangul) !== null) return res.status(400).send('include_hangul');
 
-    //XXX 추후 수정 예정
-    connection.beginTransaction();
-    connection.query('select * from user where user_id = ?', userId, function (err, results) {
-        // ID 중복 검사
-        if (results.length < 1) {
-            // 중복되는 ID가 없으면 사용 가능
-            console.log('useable_id.');
-            connection.query('select * from user where nickname = ?', userNickname, function (err, results) {
-                // 닉네임 중복 검사
-                if (results.length < 1) {
-                    // 중복되는 닉네임이 없으면 회원 가입 완료
-                    console.log('useable_nickname.');
-                    connection.query('insert into user (user_id, nickname, password, email, registration) values(?,?,?,?,now())', [
-                        userId,
-                        userNickname,
-                        userPassword,
-                        userEmail
-                    ]); // 회원정보 user 테이블에 저장
-                    connection.query('insert into hide_user (user_id, nickname, password, email, registration) values(?,?,?,?,now())', [
-                        userId,
-                        userNickname,
-                        userPassword,
-                        userEmail
-                    ]); // 회원정보를 안보이게 저장
-                    connection.commit();
-                    console.log('membership_registration_completed.');
-                    return res.status(201).send('membership_registration_completed.');
-                }
-                if (results.length >= 1) {
-                    // 닉네임 중복 시 회원가입 불가
-                    connection.rollback();
-                    console.log('the_same_nickname_please_change_your_nickname');
-                    return res.status(400).send('the_same_nickname_please_change_your_nickname');
-                }
-            });
+    connection.query('select user_id,nickname from user where user_id = ? or nickname = ?', [userId, userNickname], function (err, results) {
+        if (err) return res.status(400).end();
+
+        if (results[0] == undefined) {
+            // ID,닉네임이 중복 안되면 데이터베이스에 저장
+            connection.query('insert into user (user_id, nickname, password, email, image, registration) values(?,?,?,?,?,now())', [
+                userId,
+                userNickname,
+                userPassword,
+                userEmail,
+                image
+            ]);
+            // ID,닉네임이 중복 안되면 hiden 테이블에 저장
+            connection.query('insert into hide_user (user_id, nickname, password, email, image, registration) values(?,?,?,?,?,now())', [
+                userId,
+                userNickname,
+                userPassword,
+                userEmail,
+                image
+            ]);
+            console.log('membership_registration_completed.');
+            return res.status(201).send('membership_registration_completed.');
         }
-        if (results.length >= 1) {
-            // ID 중복 시 회원가입 불가
-            connection.rollback();
-            console.log('the_same_id_please_change_your_id');
-            return res.status(400).send('the_same_id_please_change_your_id');
-        }
+
+        const checkId = results[0].user_id;
+        const checkNickname = results[0].nickname;
+
+        if (checkId == userId) return res.status(400).send('the_same_id_please_change_your_id'); // 아이디 중복시 사용 불가
+
+        if (checkNickname == userNickname) return res.status(400).send('the_same_nickname_please_change_your_nickname'); // 닉네임 중복시 사용 불가
     });
-
-    // connection.query('select user_id,nickname from user where user_id = ?', userId, function(err, results){
-
-    //     if(err) return res.status(400).end();
-
-    //     if(results.length > 0) return res.status(400).end();
-
-    //     let searchId = results[0].userId;
-    //     let searchNickname = results[0].nickname;
-
-    //     if(searchId == userId) return res.status(400).send('the_same_id_please_change_your_id');
-
-    //     if(searchNickname == userNickname) return res.status(400).send('the_same_nickname_please_change_your_nickname');
-
-    // })
 });
 
 router.get('/login', function (req, res) {
@@ -150,10 +143,8 @@ router.post('/login', function (req, res) {
     const userId = req.body.userId;
     const userPassword = req.body.userPassword;
 
-    // console.log(req.cookies.sid);
-    // console.log(req.cookies.userId);
-
-    if (req.sessionID == req.cookies.sid) return res.status(200).send('cookie_login_success');
+    if (req.sessionID == req.cookies.sid && req.sessionID !== undefined && req.cookies.sid !== undefined)
+        return res.status(200).send('cookie_login_success');
 
     if (userId == undefined) return res.status(400).send('userId_not_null');
 
@@ -174,8 +165,8 @@ router.post('/login', function (req, res) {
 
 // 로그 아웃 코드
 router.get('/logout', function (req, res) {
-    req.session.destroy();
-    res.clearCookie('sid').status(200).send('logout.');
+    req.session.destroy(); // 세션삭제
+    res.clearCookie('sid').status(200).send('logout.'); // 쿠키삭제
 });
 
 //회원탈퇴 코드
@@ -196,11 +187,9 @@ router.delete('/', function (req, res) {
         }
         let findPassword = results[0].password; // 데이터베이스에 저장된 ID의 비밀번호를 findPassword에 할당
         let indexId = results[0].id; // 데이터베이스에 저장된 ID의 인덱스ID를 indexId에 할당
-        // console.log(results);
-        // console.log(indexId);
-        // console.log(userPassword);
-        // console.log(findPassword);
+
         if (userPassword !== findPassword) return res.status(401).send('the_password_is_wrong.'); // 저장된 패스워드와 입력한 패스워드가 다르면 종료
+
         if (userPassword == findPassword) {
             connection.query('delete from user where id = ?', indexId); // 저장한 indexId를 기반으로 데이터 삭제
             connection.query('select * from hide_user where user_id = ?', userId, function (err, results) {
@@ -304,6 +293,28 @@ router.post('/findpassword', function (req, res) {
 
             return res.status(200).send('i`m_done_sending_mail.');
         }
+    });
+});
+
+// 회원 이미지 수정
+router.post('/upload', upload.single('image'), function (req, res, next) {
+    const image = '/image/' + req.file.filename;
+    const userId = req.cookies.userId;
+
+    if (image == undefined) return res.status(400).end();
+
+    if (userId == undefined) return res.status(400).send('use_login');
+
+    connection.query('select user_id from user where user_id = ?', userId, function (err, results) {
+        if (err) return res.status(500).end();
+
+        const searchId = results[0].user_id;
+
+        connection.query('update user set image = ?, edit = now() where user_id = ?', [image, searchId], function (err) {
+            if (err) return res.status(500).end();
+
+            if (!err) return res.status(201).end();
+        });
     });
 });
 

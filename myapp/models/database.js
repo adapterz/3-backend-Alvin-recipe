@@ -1,17 +1,16 @@
 const express = require('express');
 require('dotenv').config();
 const mysql = require('mysql');
+const config = require('../config/key');
 
-// //mysql 연결
-const connection = mysql.createConnection({
-    host: process.env.databaseHost,
-    port: process.env.databasePort,
-    user: process.env.databaseUser,
-    password: process.env.databasePassword,
-    database: process.env.databaseName,
-    dateStrings: 'date'
+const connection = mysql.createConnection(config.mysqlurl);
+
+connection.connect(function (err) {
+    if (err) {
+        console.log('mysql_err', err);
+    } else {
+        console.log('mysql_connection');
+    }
 });
-
-connection.connect();
 
 module.exports = connection;
