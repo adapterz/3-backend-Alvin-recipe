@@ -5,7 +5,9 @@ module.exports = {
         user: process.env.databaseUser,
         password: process.env.databasePassword,
         database: process.env.databaseName,
-        dateStrings: 'date'
+        dateStrings: 'date',
+        connectionLimit: 10,
+        waitForConnections: true
     },
-    port: 80
+    port: 3000
 };

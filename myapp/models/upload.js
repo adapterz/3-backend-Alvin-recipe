@@ -12,7 +12,7 @@ const upload = multer({
         }
     }),
     limits: {
-        files: 1,
+        files: 10,
         fileSize: 5 * 1024 * 1024
     }
 });
