@@ -1,35 +1,44 @@
+process.env.NODE_ENV = 'development';
+// process.env.NODE_ENV = 'production';
+
 const express = require('express');
 const app = express();
-const mysql = require('mysql');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
 const cookieParser = require('cookie-parser');
-const port = 3000;
+const multer = require('multer'); // form-data 사용하기 위한 미들웨어
+const form_date = multer(); // form-data 사용하기 위한 미들웨어
+
 const indexRouter = require('./routes/index');
+const config = require('./config/key');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 app.use(
-  session({
-    secret: 'keyboard cat',
-    resave: false,
-    saveUninitialized: true,
-    store: new MySQLStore({
-      host: process.env.databaseHost,
-      port: process.env.databasePort,
-      user: process.env.databaseUser,
-      password: process.env.databasePassword,
-      database: process.env.databaseName
+    session({
+        secret: 'keyboard cat',
+        resave: false,
+        saveUninitialized: true,
+        store: new MySQLStore(config.mysqlurl)
     })
-  })
 );
+
+app.all('/*', function (req, res, next) {
+    res.header('Access-Control-Allow-Origin', 'http://localhost');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET,POST');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.set('Content-Type', 'application/json');
+
+    next();
+});
 
 app.use('/', indexRouter);
 
-app.listen(port, function () {
-  console.log(`Example app listening on port ${port}`);
+app.listen(config.port, function () {
+    console.log(`Example app listening on port ${config.port}`);
 });
 
 module.exports = app;
