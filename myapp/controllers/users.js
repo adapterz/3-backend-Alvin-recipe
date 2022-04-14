@@ -1,12 +1,11 @@
 const express = require('express');
-// const { cookie } = require('express/lib/response');
 const router = express.Router();
 const connection = require('../models/database');
 const transporter = require('../email');
 const upload = require('../models/upload');
 
 // 회원 가입 이메일 인증번호 발급 코드
-router.post('/auth/email', upload.single('userEmail'), async function (req, res, next) {
+exports.authEmail = async function (req, res, next) {
     const checkEmail = /[\w\-\.]+\@[\w\-\.]+\.[\w]/g; // 이메일 체크 정규식
     const userEmail = req.body.userEmail;
 
@@ -87,10 +86,10 @@ router.post('/auth/email', upload.single('userEmail'), async function (req, res,
             }
         });
     }
-});
+};
 
 // 이메일 인증 코드
-router.post('/auth', async function (req, res) {
+exports.auth = async function (req, res) {
     const userEmail = req.body.userEmail;
     let userAuthNumber = req.body.userAuthNumber;
 
@@ -122,11 +121,7 @@ router.post('/auth', async function (req, res) {
         }
     };
 
-    dbData();
     let data = await dbData();
-
-    console.log(data[0].authNumber);
-    console.log(userAuthNumber);
 
     if (data[0].authNumber !== userAuthNumber) return res.status(400).end();
 
@@ -134,10 +129,10 @@ router.post('/auth', async function (req, res) {
         dbUpdate();
         return res.status(200).end();
     }
-});
+};
 
 //회원가입 코드
-router.post('/', async function (req, res) {
+exports.signup = async function (req, res) {
     const checkSpace = /\s/g;
     const checkUpper = /[A-Z]+/g;
     const checkLower = /[a-z]+/g;
@@ -247,14 +242,10 @@ router.post('/', async function (req, res) {
     if (dbUserData.length == 0) {
         dbInsert();
     }
-});
-
-router.get('/login', function (req, res) {
-    res.status(200).send('login page!');
-});
+};
 
 //로그인 코드
-router.post('/login', async function (req, res) {
+exports.login = async function (req, res) {
     const userId = req.body.userId;
     const userPassword = req.body.userPassword;
 
@@ -266,7 +257,6 @@ router.post('/login', async function (req, res) {
     if (userPassword == undefined) return res.status(400).send('userPassword_not_null');
 
     const dbData = async function () {
-        // const conn = connection.getConnection();
         const con = await connection.getConnection(async conn => conn);
 
         try {
@@ -285,17 +275,17 @@ router.post('/login', async function (req, res) {
 
     if (loginData[0].password !== userPassword) return res.status(401).send('the_password_is_wrong.');
 
-    if (loginData[0].password == userPassword) return res.status(200).cookie('sid', req.sessionID).cookie('userId', userId).json(loginData);
-});
+    return res.status(200).cookie('sid', req.sessionID).cookie('userId', userId).json(loginData);
+};
 
 // 로그 아웃 코드
-router.get('/logout', function (req, res) {
+exports.logout = function (req, res) {
     req.session.destroy(); // 세션삭제
     res.clearCookie('sid').status(200).send('logout.'); // 쿠키삭제
-});
+};
 
 //회원탈퇴 코드
-router.delete('/', async function (req, res) {
+exports.withdrawal = async function (req, res) {
     const userEmail = req.body.userEmail;
     const userPassword = req.body.userPassword;
 
@@ -328,7 +318,7 @@ router.delete('/', async function (req, res) {
             const con = await connection.getConnection(async conn => conn);
 
             try {
-                await con.query('delete from user where id = ?', indexId);
+                await con.query('update hide_user set withdrawal = now() where id = ?', indexId);
                 const [hiden] = await con.query('select * from hide_user where email = ?', userEmail);
                 const hide_indexId = await hiden[0].id;
                 await con.query('update hide_user set withdrawal = now() where id = ?', hide_indexId);
@@ -342,10 +332,10 @@ router.delete('/', async function (req, res) {
         await dbDelete();
         return res.status(200).send('탈퇴완료');
     }
-});
+};
 
 //회원수정 코드
-router.patch('/', async function (req, res) {
+exports.edit = async function (req, res) {
     let userId = req.body.userId;
     let editNickname = req.body.editNickname;
     let userPassword = req.body.userPassword;
@@ -400,10 +390,10 @@ router.patch('/', async function (req, res) {
         await dbUpdate();
         return res.status(200).send('수정완료');
     }
-});
+};
 
 // 아이디 찾기 코드
-router.post('/find-id', async function (req, res) {
+exports.findId = async function (req, res) {
     let userEmail = req.body.userEmail;
 
     const dbData = async function () {
@@ -438,10 +428,10 @@ router.post('/find-id', async function (req, res) {
             if (!err) return res.status(200).send('i`m_done_sending_mail.');
         });
     }
-});
+};
 
 // 임시비밀번호 발급 코드( 이메일과 아이디를 입력하면 이메일로 임시비밀번호 발송 )
-router.post('/find-password', async function (req, res) {
+exports.findPassword = async function (req, res) {
     let { userEmail, userId } = req.body;
 
     const dbData = async function () {
@@ -492,10 +482,10 @@ router.post('/find-password', async function (req, res) {
 
         return res.status(200).send('i`m_done_sending_mail.');
     }
-});
+};
 
 // 회원 이미지 수정
-router.post('/upload', upload.single('image'), async function (req, res, next) {
+exports.imageUpload = async function (req, res, next) {
     const image = '/image/' + req.file.filename;
     const userId = req.body.userId;
 
@@ -518,7 +508,7 @@ router.post('/upload', upload.single('image'), async function (req, res, next) {
 
     const data = await dbData();
 
-    if (data.length == 0) return res.status(404).end();
+    if (data.length == 0) return res.status(404).send('11');
 
     if (data.length > 0) {
         const dbUpdate = async function () {
@@ -536,6 +526,6 @@ router.post('/upload', upload.single('image'), async function (req, res, next) {
         };
         dbUpdate();
     }
-});
+};
 
-module.exports = router;
+// module.exports = router;
