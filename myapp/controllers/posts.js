@@ -10,7 +10,7 @@ router.get('/', async function (req, res) {
         const con = await connection.getConnection(async conn => conn);
 
         try {
-            const [row] = await con.query('select title,writer,views,`like`,registration,comment,images from post');
+            const [row] = await con.query('select id,title,writer,views,`like`,registration,comment,images from post');
             con.release();
             return row;
         } catch (err) {
@@ -19,13 +19,8 @@ router.get('/', async function (req, res) {
         }
     };
 
-    // dbData();
     const data = await dbData();
-    res.status(200).json({ length: data.length, results: data });
-
-    // connection.query('select title,writer,views,`like`,registration,comment from post', function (err, results) {
-    //     res.status(200).send(results); // 제목,작성자,조회수,좋아요,등록일,댓글 조회해서 보여줌
-    // });
+    return res.status(200).json({ length: data.length, results: data });
 });
 
 //게시판 글쓰기 코드
@@ -35,7 +30,6 @@ router.post('/', async function (req, res) {
     const title = req.body.title;
     const contents = req.body.contents;
     let images = req.body.images;
-    // const writer = req.cookies.userId;
     const writer = req.body.writer;
 
     // 제목 빈칸 불가
@@ -70,24 +64,10 @@ router.post('/', async function (req, res) {
     };
 
     await dbInsert();
-
-    // connection.beginTransaction();
-    // connection.query(
-    //     'insert into post (title,contents,writer,registration) values(?,?,?,now())',
-    //     [title, contents, req.cookies.userId],
-    //     function (err, results) {
-    //         if (err) {
-    //             connection.rollback();
-    //             res.status(400).end();
-    //         }
-    //         connection.commit();
-    //         res.status(201).end();
-    //     }
-    // );
 });
 
 //게시판 글 검색
-router.get('/search', async function (req, res) {
+router.post('/search', async function (req, res) {
     let title = req.body.title;
     const writer = req.body.writer;
     const contents = req.body.contents;
@@ -110,47 +90,16 @@ router.get('/search', async function (req, res) {
     dbData();
     const data = await dbData();
 
-    console.log(data);
+    if (data.length == 0) return res.status(404).end();
 
-    res.status(200).json({ results: data });
-
-    // console.log(data);
-    // const test = await data.filter(post => post.title == 'JM3');
-    // const test = data.indexOf('hello');
-    // console.log(test);
-    // for (let i = 0; i < data.length; i++) {
-    //     console.log(data[i].title);
-    // }
-
-    // if (title !== undefined) {
-    //     // 제목으로 글 검색
-    //     title = '%' + title + '%'; // select문에서 like 사용하기 위하여 재할당
-    //     connection.query('select title from post where title like ?', title, function (err, results) {
-    //         res.status(200).send(results);
-    //     });
-    // }
-
-    // if (writer !== undefined) {
-    //     // 작성자로 글 검색
-    //     writer = '%' + writer + '%'; // select문에서 like 사용하기 위하여 재할당
-    //     connection.query('select title from post where writer like ?', writer, function (err, results) {
-    //         res.status(200).send(results);
-    //     });
-    // }
-
-    // if (contents !== undefined) {
-    //     // 내용으로 글 검색
-    //     contents = '%' + contents + '%'; // select문에서 like 사용하기 위하여 재할당
-    //     connection.query('select title from post where contents like ?', contents, function (err, results) {
-    //         res.status(200).send(results);
-    //     });
-    // }
+    return res.status(200).json({ results: data, length: data.length });
 });
 
 //게시판 글 수정
 router.patch('/', async function (req, res) {
     const title = req.body.title;
     const writer = req.cookies.userId;
+    const id = req.body.id;
     let editContents = req.body.editContents;
     let editTitle = req.body.editTitle;
 
@@ -160,9 +109,8 @@ router.patch('/', async function (req, res) {
 
     const dbData = async function () {
         const con = await connection.getConnection(async conn => conn);
-        title = '%' + title + '%'; // select문에서 like 사용하기 위하여 재할당
         try {
-            const [row] = await con.query('select title from post where title like ?', title);
+            const [row] = await con.query('select title,writer,id,contents from post where id = ?', id);
             con.release();
             return row;
         } catch (err) {
@@ -171,7 +119,6 @@ router.patch('/', async function (req, res) {
         }
     };
 
-    dbData();
     const data = await dbData();
 
     console.log(data);
@@ -210,22 +157,25 @@ router.patch('/', async function (req, res) {
 });
 
 //게시판 상세보기
-router.get('/view', function (req, res) {
-    let title = req.body.title;
+router.post('/view', async function (req, res) {
+    let id = req.body.id;
 
-    if (title == undefined) return res.status(401).end();
+    if (id == undefined) return res.status(401).end();
 
-    connection.query('select title,contents,writer,views,`like`,registration,edit,id from post where title = ?', title, function (err, results) {
-        if (err) return res.status(400).end();
+    const dbData = async function () {
+        const con = await connection.getConnection(async conn => conn);
 
-        if (results.length == 0) return res.status(401).end();
+        try {
+            const [row] = await con.query('select title,contents,writer,views,`like`,registration,edit,id from post where id = ?', id);
+            con.release();
+            return res.status(200).json({ results: row });
+        } catch (err) {
+            console.log(err);
+            return res.status(500).end();
+        }
+    };
 
-        let indexId = results[0].id;
-
-        connection.query('update post set views = views + 1 where id = ?', indexId); // 게시판 상세보기하면 조회수가 1 오름
-
-        res.status(200).send(results); // 제목,내용,작성자,조회수,좋아요,등록일,수정일을 보여줌
-    });
+    const data = await dbData();
 });
 
 //게시판 글 삭제
@@ -251,7 +201,7 @@ router.delete('/', function (req, res) {
 });
 
 //게시판 이미지 업로드
-
+//XXX imageData 함수 ASYNC 되어 있는거 AWAIT로 변경해야함
 router.post('/upload', upload.array('image'), async function (req, res) {
     const images = [];
     let imageURL;
@@ -272,7 +222,7 @@ router.post('/upload', upload.array('image'), async function (req, res) {
             }
         };
 
-        const data = await imageData();
+        const data = imageData();
         images.push(data.insertId);
     }
     return res.status(201).json({ imageIndexId: images, imageURL: imageURL });
