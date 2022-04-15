@@ -1,8 +1,7 @@
 const express = require('express');
-const router = express.Router();
 const connection = require('../models/database');
 const transporter = require('../email');
-const upload = require('../models/upload');
+const usersModel = require('../models/users');
 
 // 회원 가입 이메일 인증번호 발급 코드
 exports.authEmail = async function (req, res, next) {
@@ -23,49 +22,10 @@ exports.authEmail = async function (req, res, next) {
         text: ' 오른쪽 6글자를 입력해 주세요 ' + random
     };
 
-    const dbData = async function () {
-        // 이메일 인증번호가 있는지 없는지 위해 검색
-        const con = await connection.getConnection(async conn => conn);
+    const data = await usersModel.inquiry(userEmail);
+    console.log(data.length);
 
-        try {
-            const [row] = await con.query('select userEmail, authNumber from auth where userEmail = ?', userEmail);
-            await con.release();
-            return row;
-        } catch (err) {
-            console.log(err);
-            return res.status(500).end();
-        }
-    };
-    const dbInsert = async function () {
-        // 인증번호가 없다면 인증번호 insert
-        const con = await connection.getConnection(async conn => conn);
-        try {
-            const [row] = await con.query('insert into auth (userEmail, authNumber, registration) values (?,?,now())', [userEmail, random]);
-            con.release();
-            return row;
-        } catch (err) {
-            console.log(err);
-            return res.status(500).end();
-        }
-    };
-    const dbUpdate = async function () {
-        // 발송된 인증번호가 있다면 새로인 인증번호로 update
-        const con = await connection.getConnection(async conn => conn);
-        try {
-            const [row] = await con.query('update auth set authNumber = ?, registration = now() where userEmail = ?', [random, userEmail]);
-            con.release();
-            return row;
-        } catch (err) {
-            console.log(err);
-            return res.status(500).end();
-        }
-    };
-
-    dbData();
-    let Data = await dbData();
-
-    if (Data.length == 0) {
-        // 인증번호가 없으면 새로운 인증번호 발송
+    if (data.length == 0) {
         transporter.sendMail(mailOptions, function (err, info) {
             if (!err) {
                 dbInsert();
@@ -74,18 +34,73 @@ exports.authEmail = async function (req, res, next) {
                 return res.status(500).end();
             }
         });
+
+        await usersModel.authEmail(userEmail, random);
     }
-    if (Data.length > 0) {
-        // 인증번호가 있다면 새로운 인증번호로 업데이트
-        transporter.sendMail(mailOptions, function (err, info) {
-            if (!err) {
-                dbUpdate();
-                return res.status(201).send('i`m_done_sending_mail.');
-            } else {
-                return res.status(500).end();
-            }
-        });
-    }
+
+    // const dbData = async function () {
+    //     // 이메일 인증번호가 있는지 없는지 위해 검색
+    //     const con = await connection.getConnection(async conn => conn);
+
+    //     try {
+    //         const [row] = await con.query('select userEmail, authNumber from auth where userEmail = ?', userEmail);
+    //         await con.release();
+    //         return row;
+    //     } catch (err) {
+    //         console.log(err);
+    //         return res.status(500).end();
+    //     }
+    // };
+    // const dbInsert = async function () {
+    //     // 인증번호가 없다면 인증번호 insert
+    //     const con = await connection.getConnection(async conn => conn);
+    //     try {
+    //         const [row] = await con.query('insert into auth (userEmail, authNumber, registration) values (?,?,now())', [userEmail, random]);
+    //         con.release();
+    //         return row;
+    //     } catch (err) {
+    //         console.log(err);
+    //         return res.status(500).end();
+    //     }
+    // };
+    // const dbUpdate = async function () {
+    //     // 발송된 인증번호가 있다면 새로인 인증번호로 update
+    //     const con = await connection.getConnection(async conn => conn);
+    //     try {
+    //         const [row] = await con.query('update auth set authNumber = ?, registration = now() where userEmail = ?', [random, userEmail]);
+    //         con.release();
+    //         return row;
+    //     } catch (err) {
+    //         console.log(err);
+    //         return res.status(500).end();
+    //     }
+    // };
+
+    // dbData();
+    // let Data = await dbData();
+
+    // if (Data.length == 0) {
+    //     // 인증번호가 없으면 새로운 인증번호 발송
+    //     transporter.sendMail(mailOptions, function (err, info) {
+    //         if (!err) {
+    //             dbInsert();
+    //             return res.status(201).send('i`m_done_sending_mail.');
+    //         } else {
+    //             return res.status(500).end();
+    //         }
+    //     });
+    // }
+    // if (Data.length > 0) {
+    //     // 인증번호가 있다면 새로운 인증번호로 업데이트
+    //     transporter.sendMail(mailOptions, function (err, info) {
+    //         if (!err) {
+    //             dbUpdate();
+    //             return res.status(201).send('i`m_done_sending_mail.');
+    //         } else {
+    //             return res.status(500).end();
+    //         }
+    //     });
+    // }
 };
 
 // 이메일 인증 코드
