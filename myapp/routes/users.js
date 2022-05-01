@@ -15,14 +15,18 @@ router.post('/login', usersController.login);
 // 로그아웃
 router.get('/logout', usersController.logout);
 // 회원탈퇴
-router.delete('/withdrawal', usersController.withdrawal);
-// 회원정보 수정
-router.patch('/edit', usersController.edit);
+router.patch('/withdrawal', usersController.withdrawal);
+// 닉네임 변경
+router.patch('/edit-nickname', usersController.nicknameEdit);
+// 비밀번호 변경
+router.patch('/edit-password', usersController.passwordEdit);
 // 아이디 찾기
 router.post('/find-id', usersController.findId);
 // 비밀번호 찾기
 router.post('/find-password', usersController.findPassword);
 // 회원 프로필사진 수정
 router.patch('/image-upload', upload.single('image'), usersController.imageUpload);
+// 회원 정보 조회
+router.post('/inquiry', usersController.userInquiry);
 
 module.exports = router;

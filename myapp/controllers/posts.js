@@ -12,13 +12,13 @@ exports.inquiry = async function (req, res) {
 };
 
 //게시판 글쓰기 코드
-//프론트랑 연동하면서 테스트 필요( 프론트에서 image의 indexID를 알려줘야함 )
 exports.registration = async function (req, res) {
     // if (req.sessionID !== req.cookies.sid) return res.status(400).send('login_and_use_it'); // 세션ID랑 쿠키에있는 세션ID가 다르면 글쓰기 불가, 로그인을 안했다고 판단
 
     const title = req.body.title;
     const contents = req.body.contents;
     const writer = req.body.writer;
+    const userindex = req.body.userindex;
     let images = req.body.images;
 
     // 제목 빈칸 불가
@@ -26,11 +26,11 @@ exports.registration = async function (req, res) {
     // 내용 빈칸 불가
     if (contents == undefined) return res.status(400).send('contents_not_null');
 
-    if (images.length == 0) images = '없음';
+    // if (images.length == 0) images = '없음';
 
-    const data = await postsModel.registration(title, contents, writer, images);
+    const data = await postsModel.registration(title, contents, writer, userindex, images);
 
-    if (data == false) return res.status(500).end();
+    if (data === false) return res.status(500).end();
 
     return res.status(201).end();
 };
@@ -58,8 +58,6 @@ exports.edit = async function (req, res) {
 
     // if (writer == undefined) return res.status(403).send('you_don`t_have_permission'); // 작성자가 없으면 수정 불가
 
-    console.log(editContents);
-
     const postData = await postsModel.postData(id);
 
     if (postData == false) return res.status(500).end();
@@ -72,7 +70,7 @@ exports.edit = async function (req, res) {
 
     if (update == false) return res.status(500).end();
 
-    return res.status(200).end();
+    return res.status(200).json({ results: update });
 };
 
 //게시판 상세보기
@@ -83,7 +81,7 @@ exports.view = async function (req, res) {
 
     const data = await postsModel.view(id);
 
-    if (data == false) return res.status(500).end();
+    if (data === false) return res.status(500).end();
 
     return res.status(200).json({ results: data });
 };
@@ -99,9 +97,9 @@ exports.delete = async function (req, res) {
 
     const data = await postsModel.delete(id);
 
-    if (data == false) return res.status(500).end();
+    if (data === false) return res.status(500).end();
 
-    return res.status(200).end();
+    return res.status(200).json({ results: data });
 };
 
 //게시판 이미지 업로드
@@ -113,10 +111,126 @@ exports.imageUpload = async function (req, res) {
 
     for (let i = 0; i < req.files.length; i++) {
         imageURL = '/image/' + req.files[i].filename;
+        // imageURL = '/' + req.files[i].filename;
         const data = await postsModel.upload(imageURL);
         images.push(data.insertId);
         imageURLs.push(imageURL);
     }
 
     return res.status(201).json({ imageIndexId: images, imageURLs: imageURLs });
+};
+
+//게시판 게시글 정보조회
+exports.postInquiry = async function (req, res) {
+    const userindex = req.body.userindex;
+
+    const data = await postsModel.postInquiry(userindex);
+
+    // 데이터베이스 오류면 종료
+    if (data === false) return res.status(500).json(data);
+
+    return res.status(200).json({ results: data, length: data.length });
+};
+
+// 게시판 게시글 좋아요
+exports.like = async function (req, res) {
+    const userindex = req.body.userindex;
+    const postindex = req.body.postindex;
+
+    const data = await postsModel.like(userindex, postindex);
+
+    // 데이터베이스 오류면 종료
+    if (data === false) return res.status(500).json(data);
+
+    return res.status(201).json({ results: data });
+};
+
+// 게시판 게시글 좋아요 취소
+exports.dislike = async function (req, res) {
+    const userindex = req.body.userindex;
+    const postindex = req.body.postindex;
+
+    const data = await postsModel.disLike(userindex, postindex);
+
+    // 데이터베이스 오류면 종료
+    if (data === false) return res.status(500).json(data);
+
+    return res.status(200).json({ results: data });
+};
+
+// 게시판 게시글 좋아요 여부확인
+exports.checkLike = async function (req, res) {
+    const userindex = req.body.userindex;
+    const postindex = req.body.postindex;
+
+    const data = await postsModel.checkLike(userindex, postindex);
+
+    // 데이터베이스 오류면 종료
+    if (data === false) return res.status(500).json(data);
+
+    return res.status(201).json({ results: data, length: data.length });
+};
+
+// 게시판 게시글 좋아요 갯수 확인
+exports.countLike = async function (req, res) {
+    const postindex = req.body.postindex;
+
+    const data = await postsModel.countLike(postindex);
+
+    // 데이터베이스 오류면 종료
+    if (data === false) return res.status(500).json(data);
+
+    return res.status(201).json({ results: data, length: data.length });
+};
+
+// 메인화면 페이징
+exports.indexPaging = async function (req, res) {
+    // let page = Number(req.query.page || 1); // 기본 페이지1, 쿼리가 없다면 1로 사용
+    let page = Number(req.body.page || 1);
+    let offset = 1;
+    const limit = 20; // 한 화면에서 몇개의 게시글을 보여줄지 결정
+    const data = await postsModel.inquiry(); // 전체 게시글을 불러오기 위하여 모델 호출
+    const total = data.length; // 전체 게시글 변수에 저장
+    const lastPage = Math.ceil(total / limit); // 총 페이지 전체게시글 / 한 화면에 보여줄 게시글 나머지는 올림
+
+    // if (page > lastPage) {
+    //     // URL로 총페이지보다 높게 요청하는경우 에는 마지막 페이지로 이동
+    //     page = lastPage;
+    // }
+
+    if (page == 1) {
+        offset = 0;
+    } else {
+        offset = (page - 1) * limit;
+    }
+
+    const results = await postsModel.indexPaging(offset, limit);
+
+    return res.status(200).json({ results });
+};
+
+// 내가 쓴 게시글 페이징
+exports.mypagePaging = async function (req, res) {
+    const userindex = req.body.userindex;
+    let page = Number(req.body.page || 1);
+    let offset = 1;
+    const limit = 20; // 한 화면에서 몇개의 게시글을 보여줄지 결정
+    const data = await postsModel.inquiry(); // 전체 게시글을 불러오기 위하여 모델 호출
+    const total = data.length; // 전체 게시글 변수에 저장
+    const lastPage = Math.ceil(total / limit); // 총 페이지 전체게시글 / 한 화면에 보여줄 게시글 나머지는 올림
+
+    // if (page > lastPage) {
+    //     // URL로 총페이지보다 높게 요청하는경우 에는 마지막 페이지로 이동
+    //     page = lastPage;
+    // }
+
+    if (page == 1) {
+        offset = 0;
+    } else {
+        offset = (page - 1) * limit;
+    }
+
+    const results = await postsModel.mypagePaging(userindex, offset, limit);
+
+    return res.status(200).json({ results });
 };
