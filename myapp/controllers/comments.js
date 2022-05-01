@@ -1,6 +1,4 @@
-const express = require('express');
-const router = express.Router();
-const connection = require('../models/database');
+const commentsModel = require('../models/comment');
 
 //내가 쓴 댓글 조회
 exports.inquiry = async function (req, res) {
@@ -9,23 +7,17 @@ exports.inquiry = async function (req, res) {
 
     // if (req.sessionID !== req.cookies.sid) return res.status(400).send('login_and_ues_it'); // 로그인이 안되어 있으면 내가 쓴 댓글 조회 불가
 
-    if (userNickname == undefined) return res.status(401).end();
+    // 닉네임이 없으면 코맨트 작성 불가
+    if (userNickname == undefined) return res.status(400).end();
 
-    const dbData = async function () {
-        const con = await connection.getConnection(async conn => conn);
+    const commentData = await commentsModel.commentInquiry(userNickname);
 
-        try {
-            const [row] = await con.query('select contents, writer, registration from comment where writer = ?', userNickname);
-            con.release();
-            return row;
-        } catch (err) {
-            console.log(err);
-            return res.status(500).end();
-        }
-    };
+    // 데이터 베이스 오류면 종료
+    if (commentData === false) return res.status(500).end();
+    // 작성한 댓글이 없으면 종료
+    if (commentData.length == 0) return res.status(404).end();
 
-    const data = await dbData();
-    return res.status(200).json({ length: data.length, results: data });
+    return res.status(200).json({ length: data.length, results: commentData });
 };
 
 //댓글 작성 코드
@@ -37,25 +29,15 @@ exports.registration = async function (req, res) {
 
     if (comment == undefined) return res.status(400).send('comment_not_null');
 
-    const dbData = async function () {
-        const con = await connection.getConnection(async conn => conn);
+    const data = commentsModel.commentInsert(comment, userNickname);
 
-        try {
-            const [row] = await con.query('insert into comment (contents, writer, registration) values(?,?,now())', [comment, userNickname]);
-            con.release();
-            return res.status(201).end();
-        } catch (err) {
-            console.log(err);
-            return res.status(500).end();
-        }
-    };
+    if (data === false) return res.status(500).end();
 
-    dbData();
+    return res.status(201).end();
 };
 
 //댓글 수정 코드
 exports.edit = async function (req, res) {
-    let comment = req.body.comment;
     let editComment = req.body.editComment;
     const id = req.body.id;
 
@@ -65,45 +47,45 @@ exports.edit = async function (req, res) {
 
     if (editComment == undefined) return res.status(400).end();
 
-    const dbData = async function () {
-        const con = await connection.getConnection(async conn => conn);
+    const commentData = await commentsModel.commentInquiry(null, id);
 
-        try {
-            const [row] = await con.query('select id,contents from comment where id = ?', id);
-            const upadte = await con.query('update comment set contents = ?, edit = now() where id = ?', [editComment, id]);
-            con.release();
-            return res.status(201).end();
-        } catch (err) {
-            console.log(err);
-            return res.status(500).end();
-        }
-    };
+    // 데이터 베이스 오류면 종료
+    if (commentData === false) return res.status(500).end();
+    // 인덱스 ID가 없으면 종료
+    if (commentData.length == 0) return res.status(400).end();
+    // 작성자가 다르면 수정 불가
+    if (commentData[0].writer !== userNickname) return res.status(401).end();
 
-    dbData();
+    const data = await commentsModel.edit(editComment, id);
+
+    // 데이터 베이스 오류면 종료
+    if (data === false) return res.status(500).end();
+
+    return res.status(200).end();
 };
 
 //댓글 삭제 코드
 exports.delete = async function (req, res) {
     let id = req.body.id;
+    const userNickname = req.body.userNickname;
 
     // if (req.sessionID !== req.cookies.sid) return res.status(400).send('login_and_ues_it');
 
     if (id == undefined) return res.status(400).end();
 
-    const dbData = async function () {
-        const con = await connection.getConnection(async conn => conn);
+    const commentData = await commentsModel.commentInquiry(null, id);
 
-        try {
-            const [row] = await con.query('update comment set `delete` = now() where id = ?', id);
-            con.release();
-            return res.status(201).end();
-        } catch (err) {
-            console.log(err);
-            return res.status(500).end();
-        }
-    };
+    // 데이터 베이스 오류면 종료
+    if (commentData === false) return res.status(500).end();
+    // 인덱스 ID가 없으면 종료
+    if (commentData.length == 0) return res.status(400).end();
+    // 작성자가 다르면 삭제 불가
+    if (commentData[0].writer !== userNickname) return res.status(401).end();
 
-    dbData();
+    const data = await commentsModel.delete(id);
+
+    // 데이터 베이스 오류면 종료
+    if (data === false) return res.status(500).end();
+
+    return res.status(200).end();
 };
-
-// module.exports = router;

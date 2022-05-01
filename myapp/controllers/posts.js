@@ -1,7 +1,3 @@
-// const express = require('express');
-// const router = express.Router();
-const connection = require('../models/database');
-const upload = require('../models/upload');
 const postsModel = require('../models/posts');
 
 //게시판 전체 조회
@@ -9,6 +5,8 @@ exports.inquiry = async function (req, res) {
     const data = await postsModel.inquiry();
 
     if (data == false) return res.status(500).end();
+
+    if (data.length == 0) return res.status(404).end();
 
     return res.status(200).json({ length: data.length, results: data });
 };
