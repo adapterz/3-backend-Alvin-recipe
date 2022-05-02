@@ -76,16 +76,16 @@ exports.updateAuth = async function (userEmail) {
     return data;
 };
 
+//유저 테이블 조회
 exports.userInquiry = async function (userId, userNickname, userEmail) {
     const dbData = async function () {
         const con = await connection.getConnection(async conn => conn);
 
         try {
-            const [row] = await con.query('select id,user_id,nickname,password,email from user where user_id = ? or nickname = ? or email = ?', [
-                userId,
-                userNickname,
-                userEmail
-            ]);
+            const [row] = await con.query(
+                'select id,user_id,nickname,password,image,email,withdrawal,userSalt from user where user_id = ? or nickname = ? or email = ?',
+                [userId, userNickname, userEmail]
+            );
             con.release();
             return row;
         } catch (err) {
@@ -98,18 +98,15 @@ exports.userInquiry = async function (userId, userNickname, userEmail) {
     return data;
 };
 
-exports.signupInsert = async function (userId, userNickname, userPassword, userEmail, image) {
+exports.signupInsert = async function (userId, userNickname, userPassword, userEmail, userSalt, image) {
     const dbInsert = async function () {
         const con = await connection.getConnection(async conn => conn);
 
         try {
-            const [row] = await con.query('insert into user (user_id, nickname, password, email, image, registration) values(?,?,?,?,?,now())', [
-                userId,
-                userNickname,
-                userPassword,
-                userEmail,
-                image
-            ]);
+            const [row] = await con.query(
+                'insert into user (user_id, nickname, password, email, userSalt ,image, registration) values(?,?,?,?,?,?,now())',
+                [userId, userNickname, userPassword, userEmail, userSalt, image]
+            );
 
             con.release();
             return row;
@@ -140,16 +137,31 @@ exports.userWithdrawal = async function (indexId) {
     return data;
 };
 
-exports.edit = async function (editNickname, userPassword, indexId) {
+// 닉네임 변경 쿼리
+exports.nicknameEdit = async function (editNickname, indexId) {
     const dbUpdate = async function () {
         const con = await connection.getConnection(async conn => conn);
 
         try {
-            const [row] = await con.query('update user set nickname = ?, password = ?, edit = now() where id = ?', [
-                editNickname,
-                userPassword,
-                indexId
-            ]);
+            const [row] = await con.query('update user set nickname = ?, edit = now() where id = ?', [editNickname, indexId]);
+            con.release();
+            return row;
+        } catch (err) {
+            console.log(err);
+            return false;
+        }
+    };
+    const data = await dbUpdate();
+    return data;
+};
+
+// 비밀번호 변경 쿼리
+exports.passwordEdit = async function (password, userSalt, indexId) {
+    const dbUpdate = async function () {
+        const con = await connection.getConnection(async conn => conn);
+
+        try {
+            const [row] = await con.query('update user set password = ?, userSalt = ?, edit = now() where id = ?', [password, userSalt, indexId]);
             con.release();
             return row;
         } catch (err) {
@@ -178,6 +190,7 @@ exports.findPassword = async function (random, indexId) {
     return data;
 };
 
+// 회원 이미지 수정
 exports.profileImage = async function (image, indexId) {
     const dbUpdate = async function () {
         const con = await connection.getConnection(async conn => conn);
@@ -192,5 +205,39 @@ exports.profileImage = async function (image, indexId) {
         }
     };
     const data = dbUpdate();
+    return data;
+};
+
+exports.userAllInquiry = async function () {
+    const dbDate = async function () {
+        const con = await connection.getConnection(async conn => conn);
+
+        try {
+            const [row] = await con.query('select id, user_id, nickname, email, image from user');
+            con.release();
+            return row;
+        } catch (err) {
+            console.log(err);
+            return false;
+        }
+    };
+    const data = dbDate();
+    return data;
+};
+
+exports.test = async function () {
+    const dbDate = async function () {
+        const con = await connection.getConnection(async conn => conn);
+
+        try {
+            const [row] = await con.query('select * from test');
+            con.release();
+            return row;
+        } catch (err) {
+            console.log(err);
+            return false;
+        }
+    };
+    const data = dbDate();
     return data;
 };

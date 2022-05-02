@@ -28,13 +28,15 @@ app.use(
 app.all('/*', function (req, res, next) {
     res.header('Access-Control-Allow-Origin', 'http://localhost');
     res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET,POST');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     res.set('Content-Type', 'application/json');
 
     next();
 });
 
+// app.use(express.static(__dirname + '/image'));
+app.use(express.static(__dirname));
 app.use('/', indexRouter);
 
 app.listen(config.port, function () {
