@@ -32,7 +32,7 @@ exports.registration = async function (req, res) {
 
     if (data === false) return res.status(500).end();
 
-    return res.status(201).end();
+    return res.status(201).json({ message: 'done' });
 };
 
 //게시판 글 검색

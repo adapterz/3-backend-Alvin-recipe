@@ -34,7 +34,7 @@ exports.authEmail = async function (req, res, next) {
 
         transporter.sendMail(mailOptions, function (err, info) {
             if (!err) {
-                return res.status(201).send('i`m_done_sending_mail.');
+                return res.status(201).json({ info });
             } else {
                 return res.status(500).end();
             }
@@ -42,11 +42,13 @@ exports.authEmail = async function (req, res, next) {
     }
     // 이미 발급된 인증번호가 없으면 인증번호 생성 후 insert
 
+    if (data.length !== 0) return;
+
     await usersModel.insertAuthEmail(userEmail, random);
 
     transporter.sendMail(mailOptions, function (err, info) {
         if (!err) {
-            return res.status(201).send('i`m_done_sending_mail.');
+            return res.status(201).json({ info });
         } else {
             return res.status(500).end();
         }
@@ -68,14 +70,14 @@ exports.auth = async function (req, res) {
     // 데이터베이스 오류면 종료
     if (data === false) return res.status(500).end();
 
-    if (userAuthNumber !== data[0].authNumber) return res.status(400).end();
+    if (userAuthNumber !== data[0].authNumber) return res.status(400).json({ message: 'fail' });
 
     if (userAuthNumber == data[0].authNumber) {
         const results = await usersModel.updateAuth(userEmail);
 
         if (results === false) return res.status(500).end();
 
-        return res.status(200).end();
+        return res.status(200).json({ results });
     }
 };
 
@@ -139,8 +141,8 @@ exports.signup = async function (req, res) {
     if (userData === false) return res.status(500).end();
 
     if (userData.length > 0) {
-        if (userData[0].user_id == userId) return res.status(400).end(); // 아이디 중복시 회원가입 불가
-        if (userData[0].nickname == userNickname) return res.status(400).end(); // 닉네임 중복시 회원가입 불가
+        if (userData[0].user_id == userId) return res.status(400).json({ message: 'sameId' }); // 아이디 중복시 회원가입 불가
+        if (userData[0].nickname == userNickname) return res.status(400).json({ message: 'sameNickname' }); // 닉네임 중복시 회원가입 불가
     }
 
     // 패스워드 암호화
@@ -156,7 +158,7 @@ exports.signup = async function (req, res) {
     //데이터 베이스 오류면 종료
     if (signupData === false) return res.status(500).end();
 
-    return res.status(201).end();
+    return res.status(201).json({ data: signupData });
 };
 
 //로그인 코드
@@ -177,10 +179,10 @@ exports.login = async function (req, res) {
     // 데이터 베이스 오류면 종료
     if (userData === false) return res.status(500).end();
     // 탈퇴한 정보가 있으면 로그인 불가
-    if (userData[0].withdrawal !== null) return res.status(400).end();
+    if (userData[0].withdrawal !== null) return res.status(400).json({ message: 'fail' });
 
     // 조회한 ID가 없으면 종료
-    if (userData[0] == undefined) return res.status(400).end();
+    if (userData[0] == undefined) return res.status(400).json({ message: 'fail' });
 
     // 데이터 베이스에 저장된 salt 값을 가져옴
     const salt = userData[0].userSalt;
@@ -192,9 +194,9 @@ exports.login = async function (req, res) {
     const password = hashPassword(userPassword);
 
     // 입력한 비밀번호와 저장된 비밀번호가 다르면 종료
-    if (userData[0].password !== password) return res.status(401).send('the_password_is_wrong.');
+    if (userData[0].password !== password) return res.status(401).json({ message: 'fail' });
 
-    return res.status(200).cookie('sid', req.sessionID).cookie('userId', userId).json(userData);
+    return res.status(200).cookie('sid', req.sessionID).cookie('userId', userId).json({ userData });
 };
 
 // 로그 아웃 코드
@@ -318,7 +320,7 @@ exports.findId = async function (req, res) {
     // 데이터 베이스 오류면 종료
     if (data === false) return res.status(500).end();
     // 입력한 이메일이 없으면 종료
-    if (data.length == 0) return res.status(400).end();
+    if (data.length == 0) return res.status(400).json({ message: 'fail' });
 
     const userId = data[0].user_id;
 
@@ -331,7 +333,7 @@ exports.findId = async function (req, res) {
     transporter.sendMail(mailOptions, function (err, info) {
         if (err) return res.status(500).send('err');
 
-        if (!err) return res.status(200).send('i`m_done_sending_mail.');
+        if (!err) return res.status(200).json({ message: 'done' });
     });
 };
 
@@ -345,9 +347,9 @@ exports.findPassword = async function (req, res) {
     // 데이터 베이스 오류면 종료
     if (data === false) return res.status(500).end();
     // 입력한 이메일이 없으면 종료
-    if (data.length == 0) return res.status(400).end();
+    if (data.length == 0) return res.status(400).json({ message: 'fail' });
     // 입력한 아이디와 저장된 아이디가 다르면 종료
-    if (data[0].user_id !== userId) return res.status(400).end();
+    if (data[0].user_id !== userId) return res.status(400).json({ message: 'fail' });
 
     const indexId = data[0].id;
     let random = Math.floor(Math.random() * 888888) + 111111;
@@ -365,7 +367,7 @@ exports.findPassword = async function (req, res) {
     transporter.sendMail(mailOptions, function (err, info) {
         if (err) return res.status(500).send('err');
 
-        if (!err) return res.status(200).send('i`m_done_sending_mail.');
+        if (!err) return res.status(200).json({ message: 'done' });
     });
 };
 

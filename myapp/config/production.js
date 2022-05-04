@@ -9,5 +9,5 @@ module.exports = {
         connectionLimit: 10,
         waitForConnections: true
     },
-    port: 3000
+    port: 80
 };

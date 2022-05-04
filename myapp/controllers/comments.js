@@ -36,7 +36,7 @@ exports.registration = async function (req, res) {
 
     if (data === false) return res.status(500).end();
 
-    return res.status(201).end();
+    return res.status(201).json({ message: 'done' });
 };
 
 //댓글 수정 코드
@@ -50,7 +50,7 @@ exports.edit = async function (req, res) {
 
     if (editComment == undefined) return res.status(400).end();
 
-    const commentData = await commentsModel.commentInquiry(null, id);
+    const commentData = await commentsModel.commentInquiry(null, null, id);
 
     // 데이터 베이스 오류면 종료
     if (commentData === false) return res.status(500).end();
@@ -64,7 +64,7 @@ exports.edit = async function (req, res) {
     // 데이터 베이스 오류면 종료
     if (data === false) return res.status(500).end();
 
-    return res.status(200).end();
+    return res.status(200).json({ data });
 };
 
 //댓글 삭제 코드
@@ -90,7 +90,7 @@ exports.delete = async function (req, res) {
     // 데이터 베이스 오류면 종료
     if (data === false) return res.status(500).end();
 
-    return res.status(200).end();
+    return res.status(200).json({ data });
 };
 
 // 내가 쓴 댓글 조회

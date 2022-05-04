@@ -86,14 +86,14 @@ exports.delete = async function (id) {
 };
 
 // 내가 쓴 댓글 조회
-exports.commentInquiry = async function (userindex, postindex) {
+exports.commentInquiry = async function (userindex, postindex, id) {
     const dbData = async function () {
         const con = await connection.getConnection(async conn => conn);
         try {
             const [row] = await con.query(
                 // 'select id, writer, contents, registration, `like`, postindex from comment where userindex = ? or postindex = ?',
-                'select comment.id, comment.writer, comment.contents, comment.registration, comment.`like`, postindex, title from comment inner join post on comment.postindex = post.id where comment.`delete` is null and comment.userindex = ? or postindex = ?',
-                [userindex, postindex]
+                'select comment.id, comment.writer, comment.contents, comment.registration, comment.`like`, postindex, title from comment inner join post on comment.postindex = post.id where comment.`delete` is null and comment.userindex = ? or postindex = ? or comment.id',
+                [userindex, postindex, id]
             );
             con.release();
             return row;
