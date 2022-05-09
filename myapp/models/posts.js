@@ -22,18 +22,15 @@ exports.inquiry = async function () {
 };
 
 // 게시글 등록
-exports.registration = async function (title, contents, writer, userindex, images) {
+exports.registration = async function (title, contents, writer, userindex, images, thumbnail) {
     const dbInsert = async function () {
         const con = await connection.getConnection(async conn => conn);
 
         try {
-            const [row] = await con.query('insert into post (title,contents,writer,userindex,images,registration) values(?,?,?,?,?,now())', [
-                title,
-                contents,
-                writer,
-                userindex,
-                JSON.stringify({ images: images })
-            ]);
+            const [row] = await con.query(
+                'insert into post (title,contents,writer,userindex,images,thumbnail,registration) values(?,?,?,?,?,?,now())',
+                [title, contents, writer, userindex, JSON.stringify({ images }), thumbnail]
+            );
             for (let i = 0; i < images.length; i++) {
                 await con.query('update image set postindex = ? where id = ?', [row.insertId, images[i]]);
             }
@@ -254,7 +251,7 @@ exports.indexPaging = async function (offset, limit) {
         const con = await connection.getConnection(async conn => conn);
         try {
             const [row] = await con.query(
-                'select id,title,writer,views,`like`,`delete`,registration,comment,images from post where `delete` is null limit ?,?',
+                'select id,title,writer,views,`like`,`delete`,registration,comment,images,thumbnail from post where `delete` is null order by id desc limit ?,?',
                 [offset, limit]
             );
             con.release();
@@ -276,6 +273,22 @@ exports.mypagePaging = async function (userindex, offset, limit) {
                 'select id,title,writer,views,`like`,`delete`,registration,comment,images from post where `delete` is null and userindex = ? limit ?,?',
                 [userindex, offset, limit]
             );
+            con.release();
+            return row;
+        } catch (err) {
+            return false;
+        }
+    };
+    const data = dbData();
+    return data;
+};
+
+// 썸네일 검색
+exports.thumbnail = async function (indexId) {
+    const dbData = async function () {
+        const con = await connection.getConnection(async conn => conn);
+        try {
+            const [row] = await con.query('select id,image,postindex from image where id = ?', indexId);
             con.release();
             return row;
         } catch (err) {

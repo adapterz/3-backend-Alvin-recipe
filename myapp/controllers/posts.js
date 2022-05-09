@@ -28,7 +28,13 @@ exports.registration = async function (req, res) {
 
     // if (images.length == 0) images = '없음';
 
-    const data = await postsModel.registration(title, contents, writer, userindex, images);
+    const thumbnailId = images[images.length - 1];
+
+    const thumbnailData = await postsModel.thumbnail(thumbnailId);
+
+    const thumbnail = thumbnailData[0].image;
+
+    const data = await postsModel.registration(title, contents, writer, userindex, images, thumbnail);
 
     if (data === false) return res.status(500).end();
 
@@ -109,6 +115,7 @@ exports.imageUpload = async function (req, res) {
     let imageURL;
     let imageURLs = [];
 
+    // console.log(req.files.length);
     for (let i = 0; i < req.files.length; i++) {
         imageURL = '/image/' + req.files[i].filename;
         // imageURL = '/' + req.files[i].filename;
@@ -205,6 +212,10 @@ exports.indexPaging = async function (req, res) {
     }
 
     const results = await postsModel.indexPaging(offset, limit);
+
+    // console.log(results[0].images);
+    // console.log(results);
+    // console.log(Object.values(results[0]));
 
     return res.status(200).json({ results });
 };
