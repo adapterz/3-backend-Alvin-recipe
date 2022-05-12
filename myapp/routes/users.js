@@ -28,5 +28,7 @@ router.post('/find-password', usersController.findPassword);
 router.patch('/image-upload', upload.single('image'), usersController.imageUpload);
 // 회원 정보 조회
 router.post('/inquiry', usersController.userInquiry);
+// 회원 가입 시 이미지 변경
+router.post('/signup-image', upload.single('image'), usersController.signupImage);
 
 module.exports = router;
