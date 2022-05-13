@@ -225,12 +225,12 @@ exports.userAllInquiry = async function () {
     return data;
 };
 
-exports.test = async function () {
+exports.signupImage = async function (image) {
     const dbDate = async function () {
         const con = await connection.getConnection(async conn => conn);
 
         try {
-            const [row] = await con.query('select * from test');
+            const [row] = await con.query('insert into image (image) values(?)', image);
             con.release();
             return row;
         } catch (err) {

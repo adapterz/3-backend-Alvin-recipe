@@ -32,6 +32,8 @@ exports.registration = async function (req, res) {
 
     const thumbnailData = await postsModel.thumbnail(thumbnailId);
 
+    if (thumbnailData === false) return res.status(500).end();
+
     const thumbnail = thumbnailData[0].image;
 
     const data = await postsModel.registration(title, contents, writer, userindex, images, thumbnail);
@@ -49,7 +51,7 @@ exports.search = async function (req, res) {
 
     const data = await postsModel.search(title);
 
-    if (data == false) return res.status(500).end();
+    if (data === false) return res.status(500).end();
 
     return res.status(200).json({ length: data.length, results: data });
 };

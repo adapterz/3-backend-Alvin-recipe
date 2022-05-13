@@ -34,9 +34,9 @@ exports.authEmail = async function (req, res, next) {
 
         transporter.sendMail(mailOptions, function (err, info) {
             if (!err) {
-                return res.status(201).json({ info });
+                return res.status(201).json({ message: 'success' });
             } else {
-                return res.status(500).end();
+                return res.status(500).json({ message: 'fail' });
             }
         });
     }
@@ -48,9 +48,9 @@ exports.authEmail = async function (req, res, next) {
 
     transporter.sendMail(mailOptions, function (err, info) {
         if (!err) {
-            return res.status(201).json({ info });
+            return res.status(201).json({ message: 'success' });
         } else {
-            return res.status(500).end();
+            return res.status(500).json({ message: 'fail' });
         }
     });
 };
@@ -70,6 +70,8 @@ exports.auth = async function (req, res) {
     // 데이터베이스 오류면 종료
     if (data === false) return res.status(500).end();
 
+    if (data.length == 0) return res.status(400).json({ message: 'email_check' });
+
     if (userAuthNumber !== data[0].authNumber) return res.status(400).json({ message: 'fail' });
 
     if (userAuthNumber == data[0].authNumber) {
@@ -77,7 +79,7 @@ exports.auth = async function (req, res) {
 
         if (results === false) return res.status(500).end();
 
-        return res.status(200).json({ results });
+        return res.status(200).json({ message: 'success' });
     }
 };
 
@@ -96,7 +98,8 @@ exports.signup = async function (req, res) {
     const userPassword = req.body.userPassword;
     const userRetryPassword = req.body.userRetryPassword;
     const userEmail = req.body.userEmail;
-    let image = '/image/deault.png';
+    // let image = '/image/deault.png';
+    const image = req.body.image;
 
     let data = await usersModel.authInquiry(userEmail);
 
@@ -104,9 +107,9 @@ exports.signup = async function (req, res) {
     if (data === false) return res.status(500).end();
 
     // 이메일 인증이 완료가 안됐다면 회원가입 불가
-    if (data[0].auth !== 'yes') return res.status(400).send('이메일 인증을 완료해 주세요.');
+    if (data[0].auth !== 'yes') return res.status(400).json({ message: 'email_auth' });
     // 이메일 인증이 완료가 안됐거나, 인증한 이메일이 아니라면 회원가입 불가
-    if (data[0].auth == undefined) return res.status(400).send('이메일 인증을 완료해 주세요.');
+    if (data[0].auth == undefined) return res.status(400).json({ message: 'email_check' });
 
     // 회원가입을 위한 유효성 검사
     // ID 빈칸 불가
@@ -135,7 +138,7 @@ exports.signup = async function (req, res) {
     if (userPassword.match(checkHangul) !== null) return res.status(400).send('include_hangul');
 
     // 유저ID와 닉네임 중복검사를 위한 모델 호출
-    const userData = await usersModel.userInquiry(userId, userNickname);
+    const userData = await usersModel.userInquiry(userId, userNickname, userEmail);
 
     //데이터 베이스 오류면 종료
     if (userData === false) return res.status(500).end();
@@ -143,6 +146,7 @@ exports.signup = async function (req, res) {
     if (userData.length > 0) {
         if (userData[0].user_id == userId) return res.status(400).json({ message: 'sameId' }); // 아이디 중복시 회원가입 불가
         if (userData[0].nickname == userNickname) return res.status(400).json({ message: 'sameNickname' }); // 닉네임 중복시 회원가입 불가
+        if (userData[0].email == userEmail) return res.status(400).json({ message: 'sameEmaill' }); // 이미 가입한 이메일이면 회원가입 불가
     }
 
     // 패스워드 암호화
@@ -158,7 +162,7 @@ exports.signup = async function (req, res) {
     //데이터 베이스 오류면 종료
     if (signupData === false) return res.status(500).end();
 
-    return res.status(201).json({ data: signupData });
+    return res.status(201).json({ message: 'success' });
 };
 
 //로그인 코드
@@ -178,11 +182,12 @@ exports.login = async function (req, res) {
 
     // 데이터 베이스 오류면 종료
     if (userData === false) return res.status(500).end();
-    // 탈퇴한 정보가 있으면 로그인 불가
-    if (userData[0].withdrawal !== null) return res.status(400).json({ message: 'fail' });
 
     // 조회한 ID가 없으면 종료
     if (userData[0] == undefined) return res.status(400).json({ message: 'fail' });
+
+    // 탈퇴한 정보가 있으면 로그인 불가
+    if (userData[0].withdrawal !== null) return res.status(400).json({ message: 'fail' });
 
     // 데이터 베이스에 저장된 salt 값을 가져옴
     const salt = userData[0].userSalt;
@@ -410,4 +415,15 @@ exports.userInquiry = async function (req, res) {
     if (data === false) return res.status(500).end();
 
     return res.status(200).json({ results: data });
+};
+
+// 회원가입할때 이미지 변경
+exports.signupImage = async function (req, res, next) {
+    const image = '/image/' + req.file.filename;
+
+    const data = await usersModel.signupImage(image);
+
+    if (data === false) return res.status(500).json({ message: 'server_error' });
+
+    return res.status(201).json({ message: 'success', image });
 };
